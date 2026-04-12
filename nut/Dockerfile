@@ -1,22 +1,72 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base:9.3.0
 # hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+FROM ${BUILD_FROM} AS base
 
-# Setup base
-# hadolint ignore=DL3003
+FROM base AS builder
+
+ARG NUT_VERSION=2.8.4
+
+# Setup builder
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
-        nut=2.8.1-5 \
-        nut-snmp=2.8.1-5 \
-        nut-xml=2.8.1-5 \
-        nut-modbus=2.8.1-5 \
+        autoconf=2.72-3.1 \
+        automake=1:1.17-4 \
+        build-essential=12.12 \
+        libltdl-dev=2.5.4-4 \
+        libmodbus-dev=3.1.11-2 \
+        libsnmp-dev=5.9.4+dfsg-2+deb13u1 \
+        libssl-dev=3.5.5-1~deb13u2 \
+        libusb-1.0-0-dev=2:1.0.28-1 \
+        libxml2-dev=2.12.7+dfsg+really2.9.14-2.1+deb13u2 \
+        libtool=2.5.4-4 \
+        pkg-config=1.8.1-4 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# hadolint ignore=DL3003
+RUN \
+    mkdir -p /app /build \
+    && cd /build \
+    && NUT_FILENAME="nut-${NUT_VERSION}.tar.gz" \
+    && NUT_DOWNLOAD_URL="https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION}/${NUT_FILENAME}" \
+    && curl -L -O "${NUT_DOWNLOAD_URL}" \
+    && curl -L -O "${NUT_DOWNLOAD_URL}.sha256" \
+    && sha256sum --check "${NUT_FILENAME}.sha256" \
+    && tar -xzvf "${NUT_FILENAME}" \
+    && cd "${NUT_FILENAME%.tar.gz}" \
+    && ./configure --prefix=/usr --datadir=/usr/share/nut --sysconfdir=/etc/nut --with-drvpath=/usr/libexec/nut \
+        --enable-static \
+        --with-usb --with-modbus --with-snmp --with-nut-scanner --with-ssl \
+    && make \
+    && make DESTDIR=/app install
+
+FROM base AS app
+
+# Copy root filesystem
+COPY rootfs /
+
+# Copy nut files
+COPY --from=builder /app /
+
+# Setup app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libltdl7=2.5.4-4 \
+        libmodbus5=3.1.11-2 \
+        libsnmp40t64=5.9.4+dfsg-2+deb13u1 \
+        libusb-1.0-0=2:1.0.28-1 \
+        libxml2=2.12.7+dfsg+really2.9.14-2.1+deb13u2 \
         usbutils=1:018-2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy root filesystem
-COPY rootfs /
+# App environment
+
+# Suppress warnings related to s6 not supporting lifecycle notifications
+# Note: Unset this variable for debugging purposes
+# ? Documentation: https://networkupstools.org/docs/man/nut.conf.html
+ENV NUT_QUIET_INIT_UPSNOTIFY=true
 
 # Build arguments
 ARG BUILD_ARCH
