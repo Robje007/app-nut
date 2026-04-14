@@ -37,9 +37,10 @@ RUN \
     && tar -xzvf "${NUT_FILENAME}" \
     && cd "${NUT_FILENAME%.tar.gz}" \
     && ./configure --prefix=/usr --datadir=/usr/share/nut --sysconfdir=/etc/nut --with-drvpath=/usr/libexec/nut \
-        --with-usb --with-hidapi --with-modbus --with-snmp --with-ssl \
+       --with-usb --with-hidapi --with-modbus --with-snmp --with-ssl --with-drivers=all \
     && make \
-    && make DESTDIR=/app install
+    && make DESTDIR=/app install \
+    && /app/usr/libexec/nut/nutdrv_hashx -h 2>&1 | grep -q "usb" || { echo "ERROR: nutdrv_hashx compiled without USB support"; exit 1; }
 
 FROM base AS app
 
