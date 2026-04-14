@@ -27,8 +27,8 @@ RUN \
 
 # hadolint ignore=DL3003
 RUN \
-    mkdir -p /app /build \
-    && set -o pipefail \
+    set -o pipefail \
+    && mkdir -p /app /build \
     && cd /build \
     && NUT_FILENAME="nut-${NUT_VERSION}.tar.gz" \
     && NUT_DOWNLOAD_URL="https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION}/${NUT_FILENAME}" \
@@ -38,7 +38,7 @@ RUN \
     && tar -xzvf "${NUT_FILENAME}" \
     && cd "${NUT_FILENAME%.tar.gz}" \
     && ./configure --prefix=/usr --datadir=/usr/share/nut --sysconfdir=/etc/nut --with-drvpath=/usr/libexec/nut \
-       --with-usb --with-hidapi --with-modbus --with-snmp --with-ssl --with-drivers=all \
+        --with-usb --with-hidapi --with-modbus --with-snmp --with-ssl --with-drivers=all \
     && make \
     && make DESTDIR=/app install \
     && if ! /app/usr/libexec/nut/nutdrv_hashx -h 2>&1 | grep -q "usb"; then \
