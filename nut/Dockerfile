@@ -41,8 +41,17 @@ RUN \
         --with-usb --with-hidapi --with-modbus --with-snmp --with-ssl --with-drivers=all \
     && make \
     && make DESTDIR=/app install \
-    && if ! /app/usr/libexec/nut/nutdrv_hashx -h 2>&1 | grep -q "usb"; then \
-        echo "ERROR: nutdrv_hashx compiled without USB support"; exit 1; \
+    && NUTDRV_HASHX_HELP_OUTPUT="$(/app/usr/libexec/nut/nutdrv_hashx -h 2>&1)" \
+    && NUTDRV_HASHX_HELP_STATUS="$?" \
+    && if [ "${NUTDRV_HASHX_HELP_STATUS}" -ne 0 ]; then \
+        echo "ERROR: nutdrv_hashx -h exited with status ${NUTDRV_HASHX_HELP_STATUS}"; \
+        echo "${NUTDRV_HASHX_HELP_OUTPUT}"; \
+        exit 1; \
+    fi \
+    && if ! printf '%s\n' "${NUTDRV_HASHX_HELP_OUTPUT}" | grep -qi "usb"; then \
+        echo "ERROR: nutdrv_hashx compiled without USB support"; \
+        echo "${NUTDRV_HASHX_HELP_OUTPUT}"; \
+        exit 1; \
     fi
 
 FROM base AS app
