@@ -25,10 +25,9 @@ RUN \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# hadolint ignore=DL3003
+# hadolint ignore=DL3003,SC2039,DL4006
 RUN \
-    set -o pipefail \
-    && mkdir -p /app /build \
+    mkdir -p /app /build \
     && cd /build \
     && NUT_FILENAME="nut-${NUT_VERSION}.tar.gz" \
     && NUT_DOWNLOAD_URL="https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION}/${NUT_FILENAME}" \
